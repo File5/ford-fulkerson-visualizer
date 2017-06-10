@@ -40,6 +40,47 @@ class FlowNetwork:
                 if result != None:
                     return result
 
+    def maxLength_path(self, source, sink):
+        if source == sink:
+            return []
+
+        children = []
+        for edge in self.adj[source]:
+            if not edge.reverse:
+                children.append((edge.sink, edge))
+
+        # print(source, ":", children)
+
+        maxPath = []
+        firstEdge = None
+        maxPathLength = -1
+        for value in children:
+            child, sourceChildEdge = value
+            path = self.maxLength_path(child, sink)
+            # print(source, ":", path)
+
+            if path is None:
+                continue
+
+            # if len(path) == 0:
+            #     return [sourceChildEdge]
+
+            if len(path) > maxPathLength:
+                maxPath = path
+                firstEdge = sourceChildEdge
+                maxPathLength = len(path)
+
+        if maxPathLength == -1:
+            return None
+
+        # firstSink = maxPath[0].source
+        # firstEdge = None
+        # for edge in self.adj[source]:
+        #     if (not edge.reverse) and edge.source == source and edge.sink == firstSink:
+        #         firstEdge = edge
+
+        return [firstEdge] + maxPath
+
     def max_flow(self, source, sink):
         path = self.find_path(source, sink, [])
         while path != None:

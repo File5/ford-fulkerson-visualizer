@@ -43,6 +43,15 @@ class GraphEdge:
 class GraphGenerator:
 
     @staticmethod
+    def levels(flownetwork, source, sink):
+        L = {}
+        for vertex in flownetwork.adj:
+            path = flownetwork.maxLength_path(vertex, sink)
+            L[vertex] = (len(path), path)
+        #print(L)
+        return L
+
+    @staticmethod
     def fromFlowNetwork(flownetwork, source, sink, viewSize):
         (width, height) = viewSize
         vertices = []
@@ -141,16 +150,21 @@ class GraphCanvas(Canvas):
 
 if __name__ == "__main__":
     g = FlowNetwork()
-    [g.add_vertex(v) for v in "sopqrt"]
+    [g.add_vertex(v) for v in "sozpqrt"]
     g.add_edge('s','o',3)
     g.add_edge('s','p',3)
     g.add_edge('o','p',2)
-    g.add_edge('o','q',3)
+
+    g.add_edge('o','z',3)
+    g.add_edge('z','p',3)
+
     g.add_edge('p','r',2)
     g.add_edge('r','t',3)
     g.add_edge('q','r',4)
     g.add_edge('q','t',2)
-    print (g.max_flow('s','t'))
+    #print (g.max_flow('s','t'))
+    # print(g.maxLength_path('q', 't'))
+    print(GraphGenerator.levels(g, 's', 't'))
 
     root = Tk()
     root.title("Ford-Fulkerson algorithm")
