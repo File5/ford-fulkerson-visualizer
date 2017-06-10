@@ -66,7 +66,7 @@ class GraphGenerator:
         edges = []
 
         LEFT_MARGIN = 70
-        VMARGIN = 50
+        VMARGIN = 70
         MIDDLE = (LEFT_MARGIN, height // 2)
 
         # sourceVertex = GraphVertex(source, MIDDLE)
@@ -77,7 +77,7 @@ class GraphGenerator:
             x = (level + 1) * LEFT_MARGIN
             y = MIDDLE[1]
             margin = 0
-            #yield (x, y)
+            yield (x, y)
             while True:
                 margin += VMARGIN
                 yield (x, y - margin)
@@ -215,7 +215,7 @@ class GraphCanvas(Canvas):
         self.create_text(vertex.point, text=vertex.name)
 
     def _draw_edge(self, edge):
-        PADDING = 7
+        PADDING = 10
 
         if edge.fake:
             self.create_line(edge.point1 + edge.point2)
@@ -228,21 +228,33 @@ class GraphCanvas(Canvas):
 
 if __name__ == "__main__":
     g = FlowNetwork()
-    [g.add_vertex(v) for v in "sozpqrt"]
-    g.add_edge('s','o',3)
-    g.add_edge('s','p',3)
-    g.add_edge('o','p',2)
-
-    g.add_edge('o','z',3)
-    g.add_edge('z','p',3)
-
-    g.add_edge('p','r',2)
-    g.add_edge('r','t',3)
-    g.add_edge('q','r',4)
-    g.add_edge('q','t',2)
+    # [g.add_vertex(v) for v in "sozpqrt"]
+    # g.add_edge('s','o',3)
+    # g.add_edge('s','p',3)
+    # g.add_edge('o','p',2)
+    #
+    # g.add_edge('o','z',3)
+    # g.add_edge('z','p',3)
+    #
+    # g.add_edge('p','r',2)
+    # g.add_edge('r','t',3)
+    # g.add_edge('q','r',4)
+    # g.add_edge('q','t',2)
     #print (g.max_flow('s','t'))
     # print(g.maxLength_path('q', 't'))
-    print(GraphGenerator.levels(g, 's', 't'))
+    # print(GraphGenerator.levels(g, 's', 't'))
+
+    [g.add_vertex(v) for v in "sbcdeft"]
+    g.add_edge('s','c',24)
+    g.add_edge('s','d',3)
+    g.add_edge('s','e',3)
+    g.add_edge('b','d',3)
+    #g.add_edge('b','e',3)
+    g.add_edge('b','f',3)
+    g.add_edge('c','t',3)
+    g.add_edge('d','t',3)
+    g.add_edge('e','t',3)
+    g.add_edge('f','t',3)
 
     root = Tk()
     root.title("Ford-Fulkerson algorithm")
