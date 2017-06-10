@@ -6,9 +6,10 @@ from math import sqrt, sin, cos, pi, degrees
 class GraphVertex:
     RADIUS = 10
 
-    def __init__(self, name, point):
+    def __init__(self, name, point, fake=False):
         self.name = name
         self.point = point
+        self.fake = fake
 
 class GraphEdge:
     ARROW_SIZE = 10
@@ -17,6 +18,7 @@ class GraphEdge:
         self.source = vertex1
         self.sink = vertex2
         self.capacity = capacity
+        self.fake = False
 
         radius = GraphVertex.RADIUS
 
@@ -35,7 +37,12 @@ class GraphEdge:
         dy = radius * sinA
 
         self.point1 = (x1 + dx, y1 + dy)
+        if vertex1.fake:
+            self.point1 = (x1, y1)
         self.point2 = (x2 - dx, y2 - dy)
+        if vertex2.fake:
+            self.point2 = (x2, y2)
+            self.fake = True
         #self.create_line(point1 + point2)
         self.textPoint = ((x1 + x2) // 2, (y1 + y2) // 2)
         # TODO textPoint
@@ -55,16 +62,16 @@ class GraphGenerator:
     def fromFlowNetwork(flownetwork, source, sink, viewSize):
         (width, height) = viewSize
         vertices = []
-        vertexNames = []
+        vertexByNames = {}
         edges = []
 
-        LEFT_MARGIN = 50
+        LEFT_MARGIN = 70
         VMARGIN = 50
         MIDDLE = (LEFT_MARGIN, height // 2)
 
-        sourceVertex = GraphVertex(source, MIDDLE)
-        vertexNames.append(source)
-        vertices.append(sourceVertex)
+        # sourceVertex = GraphVertex(source, MIDDLE)
+        # vertexNames.append(source)
+        # vertices.append(sourceVertex)
 
         def coordGenerator(level):
             x = (level + 1) * LEFT_MARGIN
@@ -76,26 +83,89 @@ class GraphGenerator:
                 yield (x, y - margin)
                 yield (x, y + margin)
 
-        vertexQueue = [sourceVertex]
-        currentLevel = 1
-        while len(vertexQueue) > 0:
-            currentVertex = vertexQueue.pop()
+        L = GraphGenerator.levels(flownetwork, source, sink)
+        levels = {}
 
-            point = coordGenerator(currentLevel)
-            for edge in flownetwork.get_edges(currentVertex.name):
-                print(edge)
+        for v in L:
+            level = L[v][0]
+            if level in levels:
+                levels[level].append(v)
+            else:
+                levels[level] = [v]
+
+        maxLevel = max(levels.keys())
+
+        print(L)
+
+        levelNames = list(levels.keys())
+        levelNames.sort(reverse=True)
+
+        # добавить фиктивные вершины
+
+        queue = []
+        for level in levelNames:
+            queue.append(levels[level])
+
+        print(queue)
+
+        pointCoords = {}
+        for index, level in zip(range(len(queue)), queue):
+            if not index in pointCoords:
+                pointCoords[index] = coordGenerator(index)
+
+            for vertex in level:
+                currentVertex = GraphVertex(vertex, next(pointCoords[index]))
+                vertices.append(currentVertex)
+                vertexByNames[vertex] = currentVertex
+
+
+                # print(edge)
+                # if edge.reverse:
+                #     continue
+                # newVertexName = edge.sink
+                # if not newVertexName in vertexNames:
+                #     newVertex = GraphVertex(newVertexName, next(point))
+                #     vertexNames.append(newVertexName)
+                #     vertices.append(newVertex)
+                # print(currentVertex.name, currentVertex.point, newVertex.name, newVertex.point, edge.capacity)
+                # edges.append(GraphEdge(currentVertex, newVertex, edge.capacity))
+
+        for vertex in vertices:
+            for edge in flownetwork.get_edges(vertex.name):
                 if edge.reverse:
                     continue
-                newVertexName = edge.sink
-                if not newVertexName in vertexNames:
-                    newVertex = GraphVertex(newVertexName, next(point))
-                    vertexNames.append(newVertexName)
-                    vertices.append(newVertex)
-                    vertexQueue.insert(0, newVertex)
-                print(currentVertex.name, currentVertex.point, newVertex.name, newVertex.point, edge.capacity)
-                edges.append(GraphEdge(currentVertex, newVertex, edge.capacity))
 
-            currentLevel += 1
+                beginLevel = maxLevel - L[edge.source][0]
+                endLevel = maxLevel - L[edge.sink][0]
+
+                fakePath = []
+                if abs(beginLevel - endLevel) > 1:
+                    # добавить фиктивную вершину
+                    if beginLevel > endLevel:
+                        beginLevel, endLevel = endLevel, beginLevel
+                    for i in range(beginLevel + 1, endLevel):
+                        if not i in pointCoords:
+                            pointCoords[i] = coordGenerator(i)
+
+                        fakeVertex = GraphVertex("", next(pointCoords[i]), True)
+                        fakePath.append(fakeVertex)
+
+                if len(fakePath) == 0:
+                    newEdge = GraphEdge(vertexByNames[edge.source], vertexByNames[edge.sink], edge.capacity)
+                    edges.append(newEdge)
+                else:
+                    newEdge = GraphEdge(vertexByNames[edge.source], fakePath[0])
+                    newEdges = [newEdge]
+
+                    for fakeIndex in range(len(fakePath) - 1):
+                        newEdge = GraphEdge(fakePath[fakeIndex], fakePath[fakeIndex + 1])
+                        newEdges.append(newEdge)
+
+                    lastEdge = GraphEdge(fakePath[-1], vertexByNames[edge.sink])
+                    newEdges.append(lastEdge)
+
+                    newEdges[len(newEdges) // 2].capacity = edge.capacity
+                    edges += newEdges
 
         return (vertices, edges)
 
@@ -145,8 +215,16 @@ class GraphCanvas(Canvas):
         self.create_text(vertex.point, text=vertex.name)
 
     def _draw_edge(self, edge):
-        self.create_line(edge.point1 + edge.point2, arrow=LAST)
-        self.create_text(edge.textPoint, text=edge.capacity)
+        PADDING = 7
+
+        if edge.fake:
+            self.create_line(edge.point1 + edge.point2)
+        else:
+            self.create_line(edge.point1 + edge.point2, arrow=LAST)
+        if not edge.capacity is None:
+            (x, y) = edge.textPoint
+            self.create_rectangle((x - PADDING, y  - PADDING, x + PADDING, y + PADDING), fill="white")
+            self.create_text(edge.textPoint, text=edge.capacity)
 
 if __name__ == "__main__":
     g = FlowNetwork()
