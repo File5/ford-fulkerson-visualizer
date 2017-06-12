@@ -1,0 +1,8 @@
+s o 3
+s p 3
+o q 3
+o p 2
+p r 2
+q r 4
+q t 2
+r t 3

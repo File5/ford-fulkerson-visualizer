@@ -1,0 +1,9 @@
+s c 24
+s d 3
+s e 3
+b d 3
+b f 3
+c t 3
+d t 3
+e t 3
+f t 3

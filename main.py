@@ -1,6 +1,7 @@
 from flownetwork import FlowNetwork
 
 from tkinter import *
+from tkinter.filedialog import askopenfilename as ofdialog
 from math import sqrt, sin, cos, pi, degrees
 from time import sleep
 
@@ -48,7 +49,7 @@ class GraphEdge:
             self.point2 = (x2, y2)
             self.fake = True
         #self.create_line(point1 + point2)
-        self.textPoint = ((x1 + x2) // 2, (y1 + y2) // 2)
+        self.textPoint = ((x1 * 2 + x2) // 3, (y1 * 2 + y2) // 3)
         # TODO textPoint
 
     def setRed(self, red=True):
@@ -72,7 +73,7 @@ class GraphGenerator:
         vertexByNames = {}
         edges = []
 
-        LEFT_MARGIN = 80
+        LEFT_MARGIN = 90
         VMARGIN = 70
         MIDDLE = (LEFT_MARGIN, height // 2)
 
@@ -159,7 +160,7 @@ class GraphGenerator:
 
                 if len(fakePath) == 0:
                     newEdge = GraphEdge(vertexByNames[edge.source], vertexByNames[edge.sink], edge.capacity, flownetwork.flow[edge])
-                    if edge in path:
+                    if edge in path or edge.redge in path:
                         newEdge.setRed()
                     edges.append(newEdge)
                 else:
@@ -176,7 +177,7 @@ class GraphGenerator:
                     newEdges[len(newEdges) // 2].capacity = edge.capacity
                     newEdges[len(newEdges) // 2].flow = flownetwork.flow[edge]
 
-                    if edge in path:
+                    if edge in path or edge.redge in path:
                         for e in newEdges:
                             e.setRed()
                     edges += newEdges
@@ -267,17 +268,26 @@ if __name__ == "__main__":
     # print(g.maxLength_path('q', 't'))
     # print(GraphGenerator.levels(g, 's', 't'))
 
-    [g.add_vertex(v) for v in "sbcdeft"]
-    g.add_edge('s','c',24)
-    g.add_edge('s','d',3)
-    g.add_edge('s','e',3)
-    g.add_edge('b','d',3)
-    #g.add_edge('b','e',3)
-    g.add_edge('b','f',3)
-    g.add_edge('c','t',3)
-    g.add_edge('d','t',3)
-    g.add_edge('e','t',3)
-    g.add_edge('f','t',3)
+    # [g.add_vertex(v) for v in "sbcdeft"]
+    # g.add_edge('s','c',24)
+    # g.add_edge('s','d',3)
+    # g.add_edge('s','e',3)
+    # g.add_edge('b','d',3)
+    # g.add_edge('b','f',3)
+    # g.add_edge('c','t',3)
+    # g.add_edge('d','t',3)
+    # g.add_edge('e','t',3)
+    # g.add_edge('f','t',3)
+
+    [g.add_vertex(v) for v in "sopqrt"]
+    g.add_edge('s','o',3)
+    g.add_edge('s','p',3)
+    g.add_edge('o','q',3)
+    g.add_edge('o','p',2)
+    g.add_edge('p','r',2)
+    g.add_edge('q','r',4)
+    g.add_edge('q','t',2)
+    g.add_edge('r','t',3)
 
     root = Tk()
     root.title("Ford-Fulkerson algorithm")
@@ -285,13 +295,56 @@ if __name__ == "__main__":
     canvas.pack()
 
     gen = g.max_flow_gen('s', 't')
-    def onStepBtnClicked():
+
+    def onOpenBtnClicked():
+        filename = ofdialog()
         try:
-            nw, p = next(gen)
+            with open(filename) as f:
+                vertices = []
+                edges = []
+
+                for line in f:
+                    source, sink, capacity = line.split(' ')
+                    if not source in vertices:
+                        vertices.append(source)
+                    if not sink in vertices:
+                        vertices.append(sink)
+                    edges.append((source, sink, int(capacity)))
+
+                g = FlowNetwork()
+                for v in vertices:
+                    g.add_vertex(v)
+                for f, t, c in edges:
+                    g.add_edge(f, t, c)
+
+                canvas.setFlowNetwork(g)
+                global gen
+                gen = g.max_flow_gen('s', 't')
+        except FileNotFoundError:
+            pass
+        else:
+            stepBtn['state'] = NORMAL
+            answerLbl['text'] = ""
+
+    openBtn = Button(root, text="Open", command=onOpenBtnClicked)
+    openBtn.pack()
+
+    def onStepBtnClicked():
+        ans = None
+        try:
+            value = next(gen)
+            if type(value) is int:
+                ans = value
+                raise StopIteration()
+
+            nw, p = value
             canvas.setFlowNetwork(nw, p)
         except StopIteration:
             stepBtn['state']=DISABLED
+            answerLbl['text'] = "Answer: " + str(ans)
 
     stepBtn = Button(root, text="Step", command=onStepBtnClicked)
     stepBtn.pack()
+    answerLbl = Label(root)
+    answerLbl.pack()
     root.mainloop()

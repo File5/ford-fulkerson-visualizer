@@ -102,4 +102,4 @@ class FlowNetwork:
                 self.flow[edge.redge] -= flow
             yield (self, path)
             path = self.find_path(source, sink, [])
-        # yield sum(self.flow[edge] for edge in self.get_edges(source))
+        yield sum(self.flow[edge] for edge in self.get_edges(source))
