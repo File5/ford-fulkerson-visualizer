@@ -91,3 +91,15 @@ class FlowNetwork:
                 self.flow[edge.redge] -= flow
             path = self.find_path(source, sink, [])
         return sum(self.flow[edge] for edge in self.get_edges(source))
+
+    def max_flow_gen(self, source, sink):
+        path = self.find_path(source, sink, [])
+        while path != None:
+            residuals = [edge.capacity - self.flow[edge] for edge in path]
+            flow = min(residuals)
+            for edge in path:
+                self.flow[edge] += flow
+                self.flow[edge.redge] -= flow
+            yield (self, path)
+            path = self.find_path(source, sink, [])
+        # yield sum(self.flow[edge] for edge in self.get_edges(source))

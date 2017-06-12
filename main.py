@@ -2,6 +2,7 @@ from flownetwork import FlowNetwork
 
 from tkinter import *
 from math import sqrt, sin, cos, pi, degrees
+from time import sleep
 
 class GraphVertex:
     RADIUS = 10
@@ -14,11 +15,14 @@ class GraphVertex:
 class GraphEdge:
     ARROW_SIZE = 10
 
-    def __init__(self, vertex1, vertex2, capacity=None):
+    def __init__(self, vertex1, vertex2, capacity=None, flow=None):
         self.source = vertex1
         self.sink = vertex2
         self.capacity = capacity
+        self.flow = flow
         self.fake = False
+
+        self.red = False
 
         radius = GraphVertex.RADIUS
 
@@ -47,6 +51,9 @@ class GraphEdge:
         self.textPoint = ((x1 + x2) // 2, (y1 + y2) // 2)
         # TODO textPoint
 
+    def setRed(self, red=True):
+        self.red = red
+
 class GraphGenerator:
 
     @staticmethod
@@ -59,13 +66,13 @@ class GraphGenerator:
         return L
 
     @staticmethod
-    def fromFlowNetwork(flownetwork, source, sink, viewSize):
+    def fromFlowNetwork(flownetwork, source, sink, viewSize, path=[]):
         (width, height) = viewSize
         vertices = []
         vertexByNames = {}
         edges = []
 
-        LEFT_MARGIN = 70
+        LEFT_MARGIN = 80
         VMARGIN = 70
         MIDDLE = (LEFT_MARGIN, height // 2)
 
@@ -95,7 +102,7 @@ class GraphGenerator:
 
         maxLevel = max(levels.keys())
 
-        print(L)
+        # print(L)
 
         levelNames = list(levels.keys())
         levelNames.sort(reverse=True)
@@ -106,7 +113,7 @@ class GraphGenerator:
         for level in levelNames:
             queue.append(levels[level])
 
-        print(queue)
+        # print(queue)
 
         pointCoords = {}
         for index, level in zip(range(len(queue)), queue):
@@ -151,7 +158,9 @@ class GraphGenerator:
                         fakePath.append(fakeVertex)
 
                 if len(fakePath) == 0:
-                    newEdge = GraphEdge(vertexByNames[edge.source], vertexByNames[edge.sink], edge.capacity)
+                    newEdge = GraphEdge(vertexByNames[edge.source], vertexByNames[edge.sink], edge.capacity, flownetwork.flow[edge])
+                    if edge in path:
+                        newEdge.setRed()
                     edges.append(newEdge)
                 else:
                     newEdge = GraphEdge(vertexByNames[edge.source], fakePath[0])
@@ -165,6 +174,11 @@ class GraphGenerator:
                     newEdges.append(lastEdge)
 
                     newEdges[len(newEdges) // 2].capacity = edge.capacity
+                    newEdges[len(newEdges) // 2].flow = flownetwork.flow[edge]
+
+                    if edge in path:
+                        for e in newEdges:
+                            e.setRed()
                     edges += newEdges
 
         return (vertices, edges)
@@ -177,7 +191,11 @@ class GraphCanvas(Canvas):
         self.edges = []
         # self._testInit()
         if flownetwork is not None:
-            (self.vertices, self.edges) = GraphGenerator.fromFlowNetwork(flownetwork, 's', 't', (640, 480))
+            self.setFlowNetwork(flownetwork)
+        self.draw()
+
+    def setFlowNetwork(self, flownetwork, path=[]):
+        (self.vertices, self.edges) = GraphGenerator.fromFlowNetwork(flownetwork, 's', 't', (640, 480), path)
         self.draw()
 
     def _testInit(self):
@@ -203,6 +221,7 @@ class GraphCanvas(Canvas):
         self.edges.append(edge)
 
     def draw(self):
+        self.delete("all")
         for vertex in self.vertices:
             self._draw_vertex(vertex)
         for edge in self.edges:
@@ -215,16 +234,20 @@ class GraphCanvas(Canvas):
         self.create_text(vertex.point, text=vertex.name)
 
     def _draw_edge(self, edge):
-        PADDING = 10
+        VPADDING = 7
+        PADDING = 17
+
+        color = "red" if edge.red else "black"
 
         if edge.fake:
-            self.create_line(edge.point1 + edge.point2)
+            self.create_line(edge.point1 + edge.point2, fill=color)
         else:
-            self.create_line(edge.point1 + edge.point2, arrow=LAST)
+            self.create_line(edge.point1 + edge.point2, fill=color, arrow=LAST)
         if not edge.capacity is None:
             (x, y) = edge.textPoint
-            self.create_rectangle((x - PADDING, y  - PADDING, x + PADDING, y + PADDING), fill="white")
-            self.create_text(edge.textPoint, text=edge.capacity)
+            self.create_rectangle((x - PADDING, y  - VPADDING, x + PADDING, y + VPADDING), fill="white")
+            text = "{}/{}".format(edge.flow, edge.capacity)
+            self.create_text(edge.textPoint, text=text)
 
 if __name__ == "__main__":
     g = FlowNetwork()
@@ -258,5 +281,17 @@ if __name__ == "__main__":
 
     root = Tk()
     root.title("Ford-Fulkerson algorithm")
-    GraphCanvas(root, g).pack()
+    canvas = GraphCanvas(root, g)
+    canvas.pack()
+
+    gen = g.max_flow_gen('s', 't')
+    def onStepBtnClicked():
+        try:
+            nw, p = next(gen)
+            canvas.setFlowNetwork(nw, p)
+        except StopIteration:
+            stepBtn['state']=DISABLED
+
+    stepBtn = Button(root, text="Step", command=onStepBtnClicked)
+    stepBtn.pack()
     root.mainloop()
