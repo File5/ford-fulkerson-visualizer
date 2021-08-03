@@ -238,7 +238,7 @@ class GraphCanvas(Canvas):
         VPADDING = 7
         PADDING = 17
 
-        color = "red" if edge.red else "black"
+        color = "red" if edge.red else "systemTextColor"
 
         if edge.fake:
             self.create_line(edge.point1 + edge.point2, fill=color)
@@ -246,7 +246,7 @@ class GraphCanvas(Canvas):
             self.create_line(edge.point1 + edge.point2, fill=color, arrow=LAST)
         if not edge.capacity is None:
             (x, y) = edge.textPoint
-            self.create_rectangle((x - PADDING, y  - VPADDING, x + PADDING, y + VPADDING), fill="white")
+            self.create_rectangle((x - PADDING, y  - VPADDING, x + PADDING, y + VPADDING), fill=self['background'])
             text = "{}/{}".format(edge.flow, edge.capacity)
             self.create_text(edge.textPoint, text=text)
 
